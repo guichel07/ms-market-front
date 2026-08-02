@@ -121,8 +121,8 @@ export class CataloguePanel {
         });
       },
       onClickRemoveCard: async (cartItem: CartItem) => {
-        await ArticleController.getInstance().adjustStockLocally(cartItem.id, cartItem.quantity);
-        this.catalog?.updateArticleQuantity(cartItem.id, cartItem.quantity);
+        const updated = await ArticleController.getInstance().adjustStockLocally(cartItem.id, cartItem.quantity);
+        if (updated) this.catalog?.updateArticleQuantity(cartItem.id, updated.quantity);
         this.cartCount -= cartItem.quantity;
         this.tabbar?.updateCartCount(-cartItem.quantity);
         EventBus.getInstance().emit(AppEvent.CartItemRemoved, cartItem);
@@ -147,8 +147,8 @@ export class CataloguePanel {
 
     EventBus.getInstance().on(AppEvent.AddSheetValided, async (payload) => {
       const data = payload as ArticleDTO & { price: number; qty: number };
-      await ArticleController.getInstance().adjustStockLocally(data.id, -data.qty);
-      this.catalog?.updateArticleQuantity(data.id, -data.qty);
+      const updated = await ArticleController.getInstance().adjustStockLocally(data.id, -data.qty);
+      if (updated) this.catalog?.updateArticleQuantity(data.id, updated.quantity);
       this.basket?.addToCart({ ...data, quantity: data.qty } as CartItem);
       this.cartCount += data.qty;
       this.tabbar?.updateCartCount(data.qty);

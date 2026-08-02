@@ -113,6 +113,46 @@ describe('CataloguePanel', () => {
     expect(updateCartCount).toHaveBeenCalledWith(2);
   });
 
+  it('AddSheetValided met à jour le catalogue avec le vrai stock restant, pas le delta', async () => {
+    articleController.adjustStockLocally.mockResolvedValueOnce({
+      id: 'a1',
+      quantity: 38,
+    });
+    const updateArticleQuantity = vi.spyOn(Catalog.prototype, 'updateArticleQuantity');
+    CataloguePanel.init();
+    EventBus.getInstance().emit(AppEvent.Connected, undefined);
+
+    EventBus.getInstance().emit(AppEvent.AddSheetValided, {
+      id: 'a1',
+      name: 'Savon',
+      price: 1000,
+      qty: 2,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(updateArticleQuantity).toHaveBeenCalledWith('a1', 38);
+  });
+
+  it("RemoveCard met à jour le catalogue avec le vrai stock restant, pas le delta", async () => {
+    articleController.adjustStockLocally.mockResolvedValueOnce({
+      id: 'a1',
+      quantity: 12,
+    });
+    const updateArticleQuantity = vi.spyOn(Catalog.prototype, 'updateArticleQuantity');
+    const renderBasket = vi.spyOn(Basket.prototype, 'render');
+    CataloguePanel.init();
+    EventBus.getInstance().emit(AppEvent.Connected, undefined);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const renderCall = renderBasket.mock.calls.at(-1)?.[0] as unknown as {
+      onClickRemoveCard: (item: unknown) => Promise<void>;
+    };
+    await renderCall.onClickRemoveCard({ id: 'a1', quantity: 3 });
+
+    expect(articleController.adjustStockLocally).toHaveBeenCalledWith('a1', 3);
+    expect(updateArticleQuantity).toHaveBeenCalledWith('a1', 12);
+  });
+
   it('SellingStarted avec resetClient=true vide le panier et le compteur', () => {
     const resetItems = vi.spyOn(Basket.prototype, 'resetItems');
     CataloguePanel.init();
