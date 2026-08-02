@@ -58,14 +58,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       - run: npm ci
-      # Variables VITE_* injectées ici, au build — jamais absentes : un build sans
-      # elles embarque le fallback localhost dans le bundle livré aux vrais
-      # utilisateurs (incident réel rencontré sur ms-front-admin, voir
-      # mamansolution-doc/DEPLOYEMENT/deploiement-front-admin.md §7.1.1).
       - run: npm run build
         env:
           VITE_API_URL_AUTH: ${{ secrets.VITE_API_URL_AUTH }}
           VITE_API_URL_ORDER_SERVICE: ${{ secrets.VITE_API_URL_ORDER_SERVICE }}
+          VITE_AI_PROVIDER: ${{ secrets.VITE_AI_PROVIDER }}
+          VITE_ANTHROPIC_API_KEY: ${{ secrets.VITE_ANTHROPIC_API_KEY }}
       - uses: actions/upload-artifact@v4
         with:
           name: dist
