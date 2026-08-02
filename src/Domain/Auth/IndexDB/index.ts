@@ -41,7 +41,7 @@ export class AuthBD {
     });
   }
 
-  async saveSession(seller: SellerData, expiresInSeconds = 3600): Promise<void> {
+  async saveSession(seller: SellerData, expiresInSeconds = 3600000): Promise<void> {
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.STORE, 'readwrite');
