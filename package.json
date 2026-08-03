@@ -1,7 +1,7 @@
 {
   "name": "ms-market-front",
   "private": false,
-  "version": "v1.0.8",
+  "version": "v1.0.9",
   "type": "module",
   "scripts": {
     "dev": "vite",

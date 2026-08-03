@@ -44,4 +44,23 @@ describe('OrderBD', () => {
 
     await expect(bd.getAllOrders()).resolves.toHaveLength(0);
   });
+
+  it('saveOrder avec pendingClientPhone le conserve tel quel', async () => {
+    await bd.saveOrder({ ...order, clientId: '' }, '0700000000');
+
+    const [saved] = await bd.getAllOrders();
+    expect(saved.pendingClientPhone).toBe('0700000000');
+    expect(saved.order.clientId).toBe('');
+  });
+
+  it('resolveClientId patch clientId et retire pendingClientPhone', async () => {
+    await bd.saveOrder({ ...order, clientId: '' }, '0700000000');
+    const [saved] = await bd.getAllOrders();
+
+    await bd.resolveClientId(saved.localId, 'c1');
+
+    const [updated] = await bd.getAllOrders();
+    expect(updated.order.clientId).toBe('c1');
+    expect(updated.pendingClientPhone).toBeUndefined();
+  });
 });

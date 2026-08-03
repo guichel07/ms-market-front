@@ -3,10 +3,12 @@ import { OrderService } from '.';
 import { OrderBD } from '../IndexDB';
 import { OrderRepository } from '../Repository';
 import { OrderState } from '../State';
+import { ClientService } from '../../Client/Service';
 import type { OrderDTO } from '../Model';
 
 vi.mock('../IndexDB');
 vi.mock('../Repository');
+vi.mock('../../Client/Service');
 
 describe('OrderService', () => {
   let service: OrderService;
@@ -15,11 +17,16 @@ describe('OrderService', () => {
     getAllOrders: vi.fn(),
     saveOrder: vi.fn(),
     deleteOrderById: vi.fn(),
+    resolveClientId: vi.fn(),
   };
 
   const repo = {
     getAll: vi.fn(),
     register: vi.fn(),
+  };
+
+  const clientService = {
+    getAllLocal: vi.fn(),
   };
 
   const order: OrderDTO = {
@@ -32,10 +39,15 @@ describe('OrderService', () => {
   };
 
   beforeEach(() => {
+    vi.clearAllMocks();
     service = OrderService.getInstance();
     db.getAllOrders.mockResolvedValue([]);
+    clientService.getAllLocal.mockResolvedValue([]);
     vi.spyOn(OrderBD, 'getInstance').mockReturnValue(db as unknown as OrderBD);
     vi.spyOn(OrderRepository, 'getInstance').mockReturnValue(repo as unknown as OrderRepository);
+    vi.spyOn(ClientService, 'getInstance').mockReturnValue(
+      clientService as unknown as ClientService
+    );
     (OrderState as unknown as { instance: OrderState | null }).instance = null;
   });
 
@@ -44,8 +56,14 @@ describe('OrderService', () => {
 
     await service.registerLocal(order);
 
-    expect(db.saveOrder).toHaveBeenCalledWith(order);
+    expect(db.saveOrder).toHaveBeenCalledWith(order, undefined);
     expect(transitionSpy).toHaveBeenCalledWith('CONFIRMED', order);
+  });
+
+  it('registerLocal transmet le téléphone du client en attente de synchro', async () => {
+    await service.registerLocal({ ...order, clientId: '' }, '0700000000');
+
+    expect(db.saveOrder).toHaveBeenCalledWith({ ...order, clientId: '' }, '0700000000');
   });
 
   it('syncPending pousse les commandes en attente et les supprime du cache local', async () => {
@@ -69,5 +87,40 @@ describe('OrderService', () => {
     const result = await service.syncPending();
 
     expect(result).toEqual({ success: 1, failed: 1 });
+  });
+
+  it('syncPending résout un client synchronisé (patch clientId) puis enregistre la commande', async () => {
+    const pendingOrder = { ...order, clientId: '' };
+    db.getAllOrders.mockResolvedValue([
+      { localId: 'l1', createdAt: 1, order: pendingOrder, pendingClientPhone: '0700000000' },
+    ]);
+    clientService.getAllLocal.mockResolvedValue([
+      { id: 'c1', firstname: 'Awa', lastname: 'Diop', phone: '0700000000' },
+    ]);
+    repo.register.mockResolvedValue(undefined);
+
+    const result = await service.syncPending();
+
+    expect(db.resolveClientId).toHaveBeenCalledWith('l1', 'c1');
+    expect(repo.register).toHaveBeenCalledWith(
+      expect.objectContaining({ clientId: 'c1' })
+    );
+    expect(db.deleteOrderById).toHaveBeenCalledWith('l1');
+    expect(result).toEqual({ success: 1, failed: 0 });
+  });
+
+  it('syncPending laisse en attente une commande dont le client n\'est toujours pas synchronisé', async () => {
+    const pendingOrder = { ...order, clientId: '' };
+    db.getAllOrders.mockResolvedValue([
+      { localId: 'l1', createdAt: 1, order: pendingOrder, pendingClientPhone: '0700000000' },
+    ]);
+    clientService.getAllLocal.mockResolvedValue([]);
+
+    const result = await service.syncPending();
+
+    expect(repo.register).not.toHaveBeenCalled();
+    expect(db.deleteOrderById).not.toHaveBeenCalled();
+    expect(db.resolveClientId).not.toHaveBeenCalled();
+    expect(result).toEqual({ success: 0, failed: 0 });
   });
 });

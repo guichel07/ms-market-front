@@ -33,10 +33,11 @@ export class RecapViewManager extends RecapSheet {
     EventBus.getInstance().on(AppEvent.SaleRejected, () => {
       // Le récap reste ouvert : fermer ici sans confirmation de succès causait
       // le "retour à selling" perçu par l'utilisateur alors que la vente
-      // n'était en réalité jamais enregistrée (voir OrderController).
-      window.alert(
-        "Impossible d'enregistrer la vente : le client sélectionné est en attente de synchronisation. Réessayez dans quelques secondes."
-      );
+      // n'était en réalité jamais enregistrée (voir OrderController). Un
+      // client pas encore synchronisé ne bloque plus la vente (voir
+      // OrderService.registerLocal/syncPending) — seule l'absence totale de
+      // client sélectionné est bloquante ici.
+      window.alert("Impossible d'enregistrer la vente : sélectionnez d'abord un client.");
     });
 
     EventBus.getInstance().on(AppEvent.RecapStarted, async (payload) => {

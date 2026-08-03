@@ -30,9 +30,9 @@ export class OrderController {
   static init(): void {
     EventBus.getInstance().on(AppEvent.SaleConfirmed, async (recapItems) => {
       const client = OrderState.getInstance().getClientSelected();
-      if (!client?.id) {
+      if (!client) {
         EventBus.getInstance().emit(AppEvent.SaleRejected, {
-          reason: 'client-not-synced',
+          reason: 'no-client-selected',
         });
         return;
       }
@@ -48,16 +48,23 @@ export class OrderController {
 
       const amount = items.reduce((total, item) => total + item.price * item.quantity, 0);
 
+      // clientId peut être '' si le client vient d'être créé et n'a pas encore
+      // d'id backend — la vente n'est pas bloquée pour autant : voir
+      // OrderService.registerLocal/syncPending qui résout ça a posteriori via
+      // pendingClientPhone une fois le client synchronisé.
       const orderDTO: OrderDTO = {
         sellerName: seller?.name ?? '',
         email: seller?.email ?? '',
         saleDate: new Date().toISOString(),
         dailySummary: dailyTotal + amount,
-        clientId: client.id,
+        clientId: client.id ?? '',
         items,
       };
 
-      await OrderService.getInstance().registerLocal(orderDTO);
+      await OrderService.getInstance().registerLocal(
+        orderDTO,
+        client.id ? undefined : client.phone
+      );
       await DailySalesController.getInstance().addToTodayTotal(amount);
     });
   }

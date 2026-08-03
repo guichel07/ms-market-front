@@ -44,7 +44,7 @@ describe('OrderController', () => {
     AuthState.getInstance().transitionTo('CONNECTED', seller);
   });
 
-  it("SaleConfirmed sans client sélectionné avec id n'enregistre rien (ni clientId manquant envoyé au backend)", async () => {
+  it("SaleConfirmed sans aucun client sélectionné n'enregistre rien", async () => {
     OrderController.init();
 
     await EventBus.getInstance().emit(AppEvent.SaleConfirmed, recapItems);
@@ -52,7 +52,7 @@ describe('OrderController', () => {
     expect(orderService.registerLocal).not.toHaveBeenCalled();
   });
 
-  it('SaleConfirmed sans client synchronisé émet SaleRejected au lieu de rater silencieusement', async () => {
+  it('SaleConfirmed sans aucun client sélectionné émet SaleRejected au lieu de rater silencieusement', async () => {
     OrderController.init();
     const emitSpy = vi.spyOn(EventBus.getInstance(), 'emit');
 
@@ -60,7 +60,29 @@ describe('OrderController', () => {
 
     expect(emitSpy).toHaveBeenCalledWith(
       AppEvent.SaleRejected,
-      expect.objectContaining({ reason: 'client-not-synced' })
+      expect.objectContaining({ reason: 'no-client-selected' })
+    );
+  });
+
+  it("SaleConfirmed avec un client sélectionné mais pas encore synchronisé (sans id) n'est PAS bloqué — enregistre en local avec le téléphone en attente", async () => {
+    OrderState.init();
+    EventBus.getInstance().emit(AppEvent.OnSelectCustomer, {
+      firstname: 'Fatou',
+      lastname: 'Ba',
+      phone: '0700000000',
+    });
+    OrderState.getInstance().transitionTo('RECAP', {
+      items: recapItems as never,
+      clientSelected: { firstname: 'Fatou', lastname: 'Ba', phone: '0700000000' },
+    });
+
+    OrderController.init();
+    await EventBus.getInstance().emit(AppEvent.SaleConfirmed, recapItems);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(orderService.registerLocal).toHaveBeenCalledWith(
+      expect.objectContaining({ clientId: '' }),
+      '0700000000'
     );
   });
 
@@ -88,7 +110,8 @@ describe('OrderController', () => {
         clientId: 'c1',
         dailySummary: 5000, // 3000 (total déjà fait) + 2000 (2 x 1000)
         items: [{ articleId: 'a1', quantity: 2, price: 1000 }],
-      })
+      }),
+      undefined
     );
     expect(dailySalesController.addToTodayTotal).toHaveBeenCalledWith(2000);
   });
