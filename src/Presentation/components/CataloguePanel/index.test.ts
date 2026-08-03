@@ -153,24 +153,28 @@ describe('CataloguePanel', () => {
     expect(updateArticleQuantity).toHaveBeenCalledWith('a1', 12);
   });
 
-  it('SellingStarted avec resetClient=true vide le panier et le compteur', () => {
+  it('SellingStarted avec resetClient=true vide le panier, le compteur et la sélection client', () => {
     const resetItems = vi.spyOn(Basket.prototype, 'resetItems');
+    const clearSelection = vi.spyOn(ClientBar.prototype, 'clearSelection');
     CataloguePanel.init();
     EventBus.getInstance().emit(AppEvent.Connected, undefined);
 
     EventBus.getInstance().emit(AppEvent.SellingStarted, { resetClient: true });
 
     expect(resetItems).toHaveBeenCalled();
+    expect(clearSelection).toHaveBeenCalled();
   });
 
-  it("SellingStarted avec resetClient=false ne vide PAS le panier (annulation du récap)", () => {
+  it("SellingStarted avec resetClient=false ne vide PAS le panier ni la sélection client (annulation du récap)", () => {
     const resetItems = vi.spyOn(Basket.prototype, 'resetItems');
+    const clearSelection = vi.spyOn(ClientBar.prototype, 'clearSelection');
     CataloguePanel.init();
     EventBus.getInstance().emit(AppEvent.Connected, undefined);
 
     EventBus.getInstance().emit(AppEvent.SellingStarted, { resetClient: false });
 
     expect(resetItems).not.toHaveBeenCalled();
+    expect(clearSelection).not.toHaveBeenCalled();
   });
 
   it("Disconnected réinitialise l'instance interne", () => {

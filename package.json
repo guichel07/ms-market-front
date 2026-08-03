@@ -1,7 +1,7 @@
 {
   "name": "ms-market-front",
   "private": false,
-  "version": "v1.0.7",
+  "version": "v1.0.8",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -28,7 +28,7 @@
     "vitest": "^4.1.9"
   },
   "dependencies": {
-    "ms-clientbar": "^1.0.8",
+    "ms-clientbar": "^1.0.9",
     "ms-login": "^1.0.9",
     "ms-rq": "^1.0.2",
     "tek-ms-addsheet": "^1.0.5",

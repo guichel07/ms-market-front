@@ -164,6 +164,10 @@ export class CataloguePanel {
         this.basket?.resetItems();
         this.cartCount = 0;
         this.tabbar?.updateCartCount(0);
+        // render() seul ne réinitialise pas l'affichage du client précédent
+        // (voir ms-clientbar clearSelection) — sans ça la barre montre encore
+        // le client de la vente qui vient d'être confirmée.
+        this.clientBar?.clearSelection();
       }
       this.renderClientBar();
     });
