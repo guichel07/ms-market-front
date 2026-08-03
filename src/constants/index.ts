@@ -48,6 +48,9 @@ export const AppEvent = {
   CartItemAdded: 'cart:item-added',
   CartItemRemoved: 'cart:item-removed',
   AddSheetValided: 'addSheet:validated',
+  // Annulation du récap : synchronise le panier avec les articles éventuellement
+  // retirés depuis l'écran de récap (sinon ils "reviennent" dans le panier).
+  CartSyncedFromRecap: 'cart:synced-from-recap',
 
   // --- Client ---
   ClientsUpdated: 'client:updated',

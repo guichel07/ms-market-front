@@ -177,6 +177,26 @@ describe('CataloguePanel', () => {
     expect(clearSelection).not.toHaveBeenCalled();
   });
 
+  it('CartSyncedFromRecap synchronise le panier avec les articles retirés dans le récap et ajuste le compteur tabbar', async () => {
+    const setItems = vi.spyOn(Basket.prototype, 'setItems');
+    const updateCartCount = vi.spyOn(Tabbar.prototype, 'updateCartCount');
+    CataloguePanel.init();
+    EventBus.getInstance().emit(AppEvent.Connected, undefined);
+
+    EventBus.getInstance().emit(AppEvent.AddSheetValided, { id: 'a1', name: 'Savon', price: 1000, qty: 1 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    EventBus.getInstance().emit(AppEvent.AddSheetValided, { id: 'a2', name: 'Riz', price: 5000, qty: 1 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Dans le récap, l'article a2 a été retiré — onCancel ne renvoie plus que a1.
+    EventBus.getInstance().emit(AppEvent.CartSyncedFromRecap, [
+      { id: 'a1', name: 'Savon', price: 1000, quantity: 1 },
+    ]);
+
+    expect(setItems).toHaveBeenCalledWith([expect.objectContaining({ id: 'a1', quantity: 1 })]);
+    expect(updateCartCount).toHaveBeenCalledWith(-1); // 1 (nouveau total) - 2 (ancien cartCount)
+  });
+
   it("Disconnected réinitialise l'instance interne", () => {
     CataloguePanel.init();
     EventBus.getInstance().emit(AppEvent.Connected, undefined);

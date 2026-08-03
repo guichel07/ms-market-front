@@ -181,6 +181,18 @@ export class CataloguePanel {
     EventBus.getInstance().on(AppEvent.ClientsUpdated, () => {
       this.renderClientBar();
     });
+
+    EventBus.getInstance().on(AppEvent.CartSyncedFromRecap, (payload) => {
+      // items retirés DANS le récap (bouton ✕ de RecapSheet) puis annulation —
+      // sans ça le Basket (jamais informé de ces suppressions) réaffichait
+      // encore ces articles au retour à SELLING.
+      const remainingIds = new Set((payload as { id: string }[]).map((item) => item.id));
+      const synced = (this.basket?.getItems() ?? []).filter((item) => remainingIds.has(item.id));
+      this.basket?.setItems(synced);
+      const newCount = synced.reduce((total, item) => total + item.quantity, 0);
+      this.tabbar?.updateCartCount(newCount - this.cartCount);
+      this.cartCount = newCount;
+    });
   }
 
   /** Appelé une seule fois au bootstrap (voir main.ts) — enregistre les listeners une fois pour toutes. */

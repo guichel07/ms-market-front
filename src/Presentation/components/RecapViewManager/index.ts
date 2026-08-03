@@ -48,7 +48,11 @@ export class RecapViewManager extends RecapSheet {
         items: snapshot.items as unknown as RecapItem[],
         customers: await ClientController.getInstance().getAllLocal(),
         defaultCustomer: snapshot.clientSelected as Customer | null,
-        onCancel: () => {
+        onCancel: (items) => {
+          // items reflète les suppressions faites DANS le récap (bouton ✕ de
+          // RecapSheet) — sans cette synchro, un article retiré ici "revenait"
+          // dans le panier au retour à SELLING (Basket jamais informé).
+          EventBus.getInstance().emit(AppEvent.CartSyncedFromRecap, items);
           OrderState.getInstance().transitionTo('SELLING');
           RecapViewManager.getInstance().onClose();
         },
