@@ -37,6 +37,7 @@ export const AppEvent = {
   RecapStarted: 'order:recap-started', // état RECAP (panier validé, prêt à confirmer)
   SaleConfirmed: 'order:sale-confirmed', // clic sur "Confirmer" dans le récap — déclenche l'enregistrement
   SaleRegistered: 'order:sale-registered', // état CONFIRMED (vente enregistrée en local + backend)
+  SaleRejected: 'order:sale-rejected', // enregistrement refusé (ex: client pas encore synchronisé)
 
   // --- Catalogue / stock ---
   ArticlesSynced: 'article:articles-synced', // données fraîches disponibles (après fetch backend)

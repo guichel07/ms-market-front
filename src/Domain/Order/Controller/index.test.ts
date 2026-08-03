@@ -52,6 +52,18 @@ describe('OrderController', () => {
     expect(orderService.registerLocal).not.toHaveBeenCalled();
   });
 
+  it('SaleConfirmed sans client synchronisé émet SaleRejected au lieu de rater silencieusement', async () => {
+    OrderController.init();
+    const emitSpy = vi.spyOn(EventBus.getInstance(), 'emit');
+
+    await EventBus.getInstance().emit(AppEvent.SaleConfirmed, recapItems);
+
+    expect(emitSpy).toHaveBeenCalledWith(
+      AppEvent.SaleRejected,
+      expect.objectContaining({ reason: 'client-not-synced' })
+    );
+  });
+
   it('SaleConfirmed avec un client valide construit le bon OrderDTO (clientId, pas customerPhone)', async () => {
     OrderState.init();
     EventBus.getInstance().emit(AppEvent.OnSelectCustomer, {

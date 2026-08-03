@@ -146,4 +146,39 @@ describe('OrderState', () => {
 
     expect(state.getClientSelected()).toEqual(client);
   });
+
+  it('init: ClientsUpdated rafraîchit le client sélectionné une fois synchronisé (même phone, id ajouté)', () => {
+    OrderState.init();
+    const state = OrderState.getInstance();
+    const pendingClient: ClientDTO = { firstname: 'Awa', lastname: 'Diop', phone: '0700000000' };
+
+    EventBus.getInstance().emit(AppEvent.OnSelectCustomer, pendingClient);
+    expect(state.getClientSelected()?.id).toBeUndefined();
+
+    EventBus.getInstance().emit(AppEvent.ClientsUpdated, [client]);
+
+    expect(state.getClientSelected()).toEqual(client);
+  });
+
+  it('init: ClientsUpdated sans client sélectionné ne fait rien', () => {
+    OrderState.init();
+    const state = OrderState.getInstance();
+
+    EventBus.getInstance().emit(AppEvent.ClientsUpdated, [client]);
+
+    expect(state.getClientSelected()).toBeNull();
+  });
+
+  it('init: ClientsUpdated ignore les clients sans correspondance de phone', () => {
+    OrderState.init();
+    const state = OrderState.getInstance();
+    const pendingClient: ClientDTO = { firstname: 'Awa', lastname: 'Diop', phone: '0700000000' };
+
+    EventBus.getInstance().emit(AppEvent.OnSelectCustomer, pendingClient);
+    EventBus.getInstance().emit(AppEvent.ClientsUpdated, [
+      { id: 'other', firstname: 'X', lastname: 'Y', phone: '0711111111' },
+    ]);
+
+    expect(state.getClientSelected()).toEqual(pendingClient);
+  });
 });

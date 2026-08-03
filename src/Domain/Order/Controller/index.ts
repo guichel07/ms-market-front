@@ -31,9 +31,9 @@ export class OrderController {
     EventBus.getInstance().on(AppEvent.SaleConfirmed, async (recapItems) => {
       const client = OrderState.getInstance().getClientSelected();
       if (!client?.id) {
-        console.error(
-          "Impossible d'enregistrer la vente : le client sélectionné n'a pas encore d'id backend (hors-ligne, en attente de synchro)."
-        );
+        EventBus.getInstance().emit(AppEvent.SaleRejected, {
+          reason: 'client-not-synced',
+        });
         return;
       }
 

@@ -26,6 +26,19 @@ export class RecapViewManager extends RecapSheet {
       RecapViewManager.reset();
     });
 
+    EventBus.getInstance().on(AppEvent.SaleRegistered, () => {
+      RecapViewManager.getInstance().onClose();
+    });
+
+    EventBus.getInstance().on(AppEvent.SaleRejected, () => {
+      // Le récap reste ouvert : fermer ici sans confirmation de succès causait
+      // le "retour à selling" perçu par l'utilisateur alors que la vente
+      // n'était en réalité jamais enregistrée (voir OrderController).
+      window.alert(
+        "Impossible d'enregistrer la vente : le client sélectionné est en attente de synchronisation. Réessayez dans quelques secondes."
+      );
+    });
+
     EventBus.getInstance().on(AppEvent.RecapStarted, async (payload) => {
       const snapshot = payload as OrderSnapshot;
       if (!snapshot?.items?.length) return;
@@ -40,7 +53,8 @@ export class RecapViewManager extends RecapSheet {
         },
         onConfirm: (items) => {
           EventBus.getInstance().emit(AppEvent.SaleConfirmed, items);
-          RecapViewManager.getInstance().onClose();
+          // Fermeture différée : voir listeners SaleRegistered/SaleRejected
+          // ci-dessus, on ne ferme plus tant qu'on ne sait pas si ça a réussi.
         },
         onSaveCustomer: (customer: Customer) => {
           ClientController.getInstance().save(customer as ClientDTO);

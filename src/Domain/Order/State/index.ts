@@ -106,5 +106,17 @@ export class OrderState {
     EventBus.getInstance().on(AppEvent.OnSelectCustomer, (payload) => {
       OrderState.getInstance().setClientSelected(payload as ClientDTO);
     });
+
+    // Un client créé pendant la vente est sélectionné immédiatement (avant sync
+    // backend), donc sans id — sans ce listener, clientSelected reste bloqué
+    // sans id pour toute la vente même une fois la synchro réussie, et la
+    // confirmation de vente échoue silencieusement (voir OrderController).
+    EventBus.getInstance().on(AppEvent.ClientsUpdated, (payload) => {
+      const clients = payload as ClientDTO[];
+      const current = OrderState.getInstance().getClientSelected();
+      if (!current) return;
+      const refreshed = clients.find((c) => c.phone === current.phone);
+      if (refreshed) OrderState.getInstance().setClientSelected(refreshed);
+    });
   }
 }
