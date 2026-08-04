@@ -2,7 +2,14 @@ import { RecapSheet, type Customer, type RecapItem } from 'tek-ms-recap';
 import { EventBus } from '../../../EventBus';
 import { AppEvent } from '../../../constants';
 import { ClientController } from '../../../Domain/Client/Controller';
+import type { ClientDTO } from '../../../Domain/Client/Model';
 import { OrderState, type OrderSnapshot } from '../../../Domain/Order/State';
+
+// tek-ms-recap ne connaît que {id, label} (anonymat total) — un client nommé
+// n'existe plus, cf. ClientProfilePanel. On adapte depuis/vers ClientDTO ici.
+function toRecapCustomer(client: ClientDTO): Customer {
+  return { id: client.id ?? '', label: client.firstname };
+}
 
 export class RecapViewManager extends RecapSheet {
   private static instance: RecapViewManager | null = null;
@@ -43,12 +50,14 @@ export class RecapViewManager extends RecapSheet {
       const snapshot = payload as OrderSnapshot;
       if (!snapshot?.items?.length) return;
 
+      // Profils anonymes en cache, pas des clients nommés (voir
+      // ClientProfilePanel) — permet de changer de profil sans quitter le récap.
+      const profiles = await ClientController.getInstance().getAllAnonymousLocal();
+
       RecapViewManager.getInstance().render({
         items: snapshot.items as unknown as RecapItem[],
-        // Profils anonymes en cache, pas des clients nommés (voir
-        // ClientProfilePanel) — permet de changer de profil sans quitter le récap.
-        customers: await ClientController.getInstance().getAllAnonymousLocal(),
-        defaultCustomer: snapshot.clientSelected as Customer | null,
+        customers: profiles.map(toRecapCustomer),
+        defaultCustomer: snapshot.clientSelected ? toRecapCustomer(snapshot.clientSelected) : null,
         onCancel: (items) => {
           // items reflète les suppressions faites DANS le récap (bouton ✕ de
           // RecapSheet) — sans cette synchro, un article retiré ici "revenait"
@@ -62,10 +71,12 @@ export class RecapViewManager extends RecapSheet {
           // Fermeture différée : voir listeners SaleRegistered/SaleRejected
           // ci-dessus, on ne ferme plus tant qu'on ne sait pas si ça a réussi.
         },
-        // Plus de "créer un nouveau client" (anonymat total) — onSaveCustomer
-        // est optionnel côté RecapSheet, on ne le fournit plus.
+        // RecapSheet ne renvoie que {id, label} — on retrouve la fiche
+        // complète (ageCategory/gender/id réel) pour rester cohérent avec ce
+        // qu'émet ClientProfilePanel via ce même événement.
         selectedCustomer: (customer: Customer) => {
-          EventBus.getInstance().emit(AppEvent.OnSelectCustomer, customer);
+          const client = profiles.find((c) => c.id === customer.id);
+          if (client) EventBus.getInstance().emit(AppEvent.OnSelectCustomer, client);
         },
       });
     });
