@@ -115,4 +115,32 @@ describe('OrderController', () => {
     );
     expect(dailySalesController.addToTodayTotal).toHaveBeenCalledWith(2000);
   });
+
+  it('SaleConfirmed propage soldAsLabel depuis les items du récap vers les lignes de commande', async () => {
+    OrderState.init();
+    EventBus.getInstance().emit(AppEvent.OnSelectCustomer, {
+      id: 'c1',
+      firstname: 'Fatou',
+      lastname: 'Ba',
+      phone: '0700000000',
+    });
+    const cartonItems = [
+      { id: 'a1', name: 'Lait en poudre', price: 11000, quantity: 1, soldAsLabel: 'Carton de 12' },
+    ];
+    OrderState.getInstance().transitionTo('RECAP', {
+      items: cartonItems as never,
+      clientSelected: { id: 'c1', firstname: 'Fatou', lastname: 'Ba', phone: '0700000000' },
+    });
+
+    OrderController.init();
+    await EventBus.getInstance().emit(AppEvent.SaleConfirmed, cartonItems);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(orderService.registerLocal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [{ articleId: 'a1', quantity: 1, price: 11000, soldAsLabel: 'Carton de 12' }],
+      }),
+      undefined
+    );
+  });
 });

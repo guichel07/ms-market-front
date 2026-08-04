@@ -44,4 +44,25 @@ describe('ClientRepository', () => {
     );
     expect(result).toEqual(created);
   });
+
+  it('getOrCreateAnonymous appelle GET /clients/anonymous/{ageCategory}?gender=...', async () => {
+    const anonymous: ClientDTO = {
+      id: 'anon-1',
+      firstname: 'Client anonyme',
+      lastname: 'ENFANT HOMME',
+      phone: '',
+      ageCategory: 'ENFANT',
+      gender: 'HOMME',
+      anonymous: true,
+    };
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => anonymous } as Response);
+
+    const result = await ClientRepository.getInstance().getOrCreateAnonymous('ENFANT', 'HOMME');
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL_CLIENTS}/anonymous/ENFANT?gender=HOMME`,
+      expect.objectContaining({ method: 'GET', credentials: 'include' })
+    );
+    expect(result).toEqual(anonymous);
+  });
 });

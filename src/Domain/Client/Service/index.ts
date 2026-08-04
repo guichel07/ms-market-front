@@ -1,7 +1,7 @@
 import { AppEvent } from '../../../constants';
 import { EventBus } from '../../../EventBus';
-import { ClientBD } from '../IndexDB';
-import type { ClientDTO } from '../Model';
+import { AnonymousClientBD, ClientBD } from '../IndexDB';
+import { ANONYMOUS_PROFILES, type ClientDTO } from '../Model';
 import { ClientRepository } from '../Repository';
 
 export class ClientService {
@@ -68,5 +68,32 @@ export class ClientService {
     } catch (e) {
       console.error(e);
     }
+  }
+
+  /** Les 6 profils anonymes déjà mis en cache (voir syncAnonymousProfiles) — accès instantané, hors-ligne inclus. */
+  async getAllAnonymousLocal(): Promise<ClientDTO[]> {
+    return AnonymousClientBD.getInstance().getAllProfiles();
+  }
+
+  /**
+   * Récupère (ou crée côté back au premier lancement) les 6 fiches anonymes et les
+   * met en cache local — appelé une fois à la connexion pour que la sélection d'un
+   * profil en caisse dispose toujours d'un id backend réel, réseau ou pas au moment
+   * de la vente (contrairement à un client nommé créé à la volée, jamais générique).
+   */
+  async syncAnonymousProfiles(): Promise<void> {
+    // N'émet PAS ClientsUpdated : ce canal sert au rafraîchissement des clients
+    // NOMMÉS (voir OrderState.init, matching par phone) — des profils anonymes
+    // ayant tous phone=null s'y mélangeraient et risqueraient de faire matcher
+    // le mauvais profil. L'appelant (CataloguePanel) attend cette promesse puis
+    // re-render explicitement à la place.
+    await Promise.all(
+      ANONYMOUS_PROFILES.map((profile) =>
+        ClientRepository.getInstance()
+          .getOrCreateAnonymous(profile.ageCategory, profile.gender)
+          .then((client) => AnonymousClientBD.getInstance().saveProfile(client))
+          .catch((e) => console.error(e))
+      )
+    );
   }
 }

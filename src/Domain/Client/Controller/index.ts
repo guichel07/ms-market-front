@@ -14,6 +14,9 @@ export class ClientController {
   }
 
   static init(): void {
+    // syncAnonymousProfiles est déclenché par CataloguePanel (pas ici) : il doit
+    // être attendu avant le premier render des boutons profil, ce qu'un listener
+    // Connected indépendant ne peut pas garantir.
     EventBus.getInstance().on(AppEvent.Connected, () => {
       ClientController.getInstance().getAll();
     });
@@ -29,5 +32,13 @@ export class ClientController {
 
   async save(client: ClientDTO): Promise<void> {
     return ClientService.getInstance().save(client);
+  }
+
+  async getAllAnonymousLocal(): Promise<ClientDTO[]> {
+    return ClientService.getInstance().getAllAnonymousLocal();
+  }
+
+  async syncAnonymousProfiles(): Promise<void> {
+    return ClientService.getInstance().syncAnonymousProfiles();
   }
 }

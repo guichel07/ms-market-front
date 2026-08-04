@@ -40,11 +40,17 @@ export class OrderController {
       const seller = AuthState.getInstance().getCurrentSeller();
       const dailyTotal = await DailySalesController.getInstance().getTodayTotal();
 
-      const items: OrderLineDTO[] = (recapItems as RecapItem[]).map((item) => ({
-        articleId: item.id,
-        quantity: item.quantity,
-        price: item.price,
-      }));
+      // RecapItem (tek-ms-recap) ne déclare pas soldAsLabel, mais l'objet réel
+      // (un CartItem passé tel quel depuis le panier) le porte toujours — lu
+      // ici via un cast local plutôt que de modifier le type externe.
+      const items: OrderLineDTO[] = (recapItems as (RecapItem & { soldAsLabel?: string })[]).map(
+        (item) => ({
+          articleId: item.id,
+          quantity: item.quantity,
+          price: item.price,
+          soldAsLabel: item.soldAsLabel,
+        })
+      );
 
       const amount = items.reduce((total, item) => total + item.price * item.quantity, 0);
 

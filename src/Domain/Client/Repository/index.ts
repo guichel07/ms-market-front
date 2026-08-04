@@ -1,5 +1,5 @@
 import { API_URL_CLIENTS } from '../../../constants';
-import type { ClientDTO } from '../Model';
+import type { AgeCategory, ClientDTO, Gender } from '../Model';
 
 export class ClientRepository {
   private static instance: ClientRepository | null = null;
@@ -34,6 +34,15 @@ export class ClientRepository {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(clientDTO),
     });
+    return this.handleResponse(response);
+  }
+
+  /** Récupère (ou crée côté back si première vente) la fiche partagée pour ce profil anonyme. */
+  async getOrCreateAnonymous(ageCategory: AgeCategory, gender: Gender): Promise<ClientDTO> {
+    const response = await fetch(
+      `${API_URL_CLIENTS}/anonymous/${ageCategory}?gender=${gender}`,
+      { method: 'GET', credentials: 'include' }
+    );
     return this.handleResponse(response);
   }
 }

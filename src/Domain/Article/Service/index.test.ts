@@ -26,7 +26,8 @@ describe('ArticleService', () => {
     category: 'Soins',
     price: 1000,
     quantity: 10,
-    unit: 'piece',
+    atomicUnit: 'pièce',
+    packagingLevels: [],
     criticalStock: 2,
     archived: false,
   };

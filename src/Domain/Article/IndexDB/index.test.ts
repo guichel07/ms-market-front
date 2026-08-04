@@ -14,7 +14,8 @@ describe('ArticleBD', () => {
     category: 'Soins',
     price: 1000,
     quantity: 10,
-    unit: 'piece',
+    atomicUnit: 'pièce',
+    packagingLevels: [],
     criticalStock: 2,
     archived: false,
   };
@@ -55,7 +56,7 @@ describe('ArticleBD', () => {
   });
 
   it('adjustStockLocally accepte un delta fractionnaire (article vendu au kilo)', async () => {
-    await bd.saveArticles([{ ...article, id: 'riz', quantity: 5, unit: 'kg' }]);
+    await bd.saveArticles([{ ...article, id: 'riz', quantity: 5, atomicUnit: 'kg' }]);
 
     const updated = await bd.adjustStockLocally('riz', -0.5);
     expect(updated?.quantity).toBe(4.5);

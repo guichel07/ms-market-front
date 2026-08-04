@@ -2,6 +2,8 @@ export interface OrderLineDTO {
   articleId: string;
   quantity: number;
   price: number;
+  /** Libellé du palier de vente choisi (voir Article.packagingLevels côté back) — absent = vente à l'unité atomique. */
+  soldAsLabel?: string;
 }
 
 /**

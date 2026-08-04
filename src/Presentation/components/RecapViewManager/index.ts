@@ -2,7 +2,6 @@ import { RecapSheet, type Customer, type RecapItem } from 'tek-ms-recap';
 import { EventBus } from '../../../EventBus';
 import { AppEvent } from '../../../constants';
 import { ClientController } from '../../../Domain/Client/Controller';
-import type { ClientDTO } from '../../../Domain/Client/Model';
 import { OrderState, type OrderSnapshot } from '../../../Domain/Order/State';
 
 export class RecapViewManager extends RecapSheet {
@@ -46,7 +45,9 @@ export class RecapViewManager extends RecapSheet {
 
       RecapViewManager.getInstance().render({
         items: snapshot.items as unknown as RecapItem[],
-        customers: await ClientController.getInstance().getAllLocal(),
+        // Profils anonymes en cache, pas des clients nommés (voir
+        // ClientProfilePanel) — permet de changer de profil sans quitter le récap.
+        customers: await ClientController.getInstance().getAllAnonymousLocal(),
         defaultCustomer: snapshot.clientSelected as Customer | null,
         onCancel: (items) => {
           // items reflète les suppressions faites DANS le récap (bouton ✕ de
@@ -61,9 +62,8 @@ export class RecapViewManager extends RecapSheet {
           // Fermeture différée : voir listeners SaleRegistered/SaleRejected
           // ci-dessus, on ne ferme plus tant qu'on ne sait pas si ça a réussi.
         },
-        onSaveCustomer: (customer: Customer) => {
-          ClientController.getInstance().save(customer as ClientDTO);
-        },
+        // Plus de "créer un nouveau client" (anonymat total) — onSaveCustomer
+        // est optionnel côté RecapSheet, on ne le fournit plus.
         selectedCustomer: (customer: Customer) => {
           EventBus.getInstance().emit(AppEvent.OnSelectCustomer, customer);
         },

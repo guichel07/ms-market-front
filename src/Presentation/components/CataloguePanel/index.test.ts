@@ -9,19 +9,22 @@ import { ArticleController } from '../../../Domain/Article/Controller';
 import { ClientController } from '../../../Domain/Client/Controller';
 import { Basket } from 'tek-ms-barket';
 import { Tabbar } from 'tek-ms-tabbar';
-import { ClientBar } from 'ms-clientbar';
 import { AddSheet } from 'tek-ms-addsheet';
 import { Catalog } from 'tek-ms-catalog';
+import { ClientProfilePanel } from '../ClientProfilePanel';
 
 describe('CataloguePanel', () => {
   const articleController = {
     getLocalAll: vi.fn().mockResolvedValue([]),
+    getLocalById: vi.fn().mockResolvedValue(null),
     adjustStockLocally: vi.fn().mockResolvedValue(null),
     syncArticles: vi.fn().mockResolvedValue(undefined),
   };
   const clientController = {
     getAllLocal: vi.fn().mockResolvedValue([]),
     save: vi.fn(),
+    getAllAnonymousLocal: vi.fn().mockResolvedValue([]),
+    syncAnonymousProfiles: vi.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(() => {
@@ -52,7 +55,7 @@ describe('CataloguePanel', () => {
   it('Connected monte et rend les 5 composants embarqués', async () => {
     const renderBasket = vi.spyOn(Basket.prototype, 'render');
     const renderTabbar = vi.spyOn(Tabbar.prototype, 'render');
-    const renderClientBar = vi.spyOn(ClientBar.prototype, 'render');
+    const renderClientProfilePanel = vi.spyOn(ClientProfilePanel.prototype, 'render');
     const renderCatalog = vi.spyOn(Catalog.prototype, 'render');
 
     CataloguePanel.init();
@@ -61,8 +64,9 @@ describe('CataloguePanel', () => {
 
     expect(renderBasket).toHaveBeenCalled();
     expect(renderTabbar).toHaveBeenCalled();
-    expect(renderClientBar).toHaveBeenCalled();
+    expect(renderClientProfilePanel).toHaveBeenCalled();
     expect(renderCatalog).toHaveBeenCalled();
+    expect(clientController.syncAnonymousProfiles).toHaveBeenCalled();
   });
 
   it('sync() délègue à ArticleController.syncArticles', async () => {
@@ -85,6 +89,8 @@ describe('CataloguePanel', () => {
       costPrice: 500,
       minPrice: 800,
       maxPrice: 1200,
+      atomicUnit: 'pièce',
+      packagingLevels: [],
     });
 
     expect(renderAddSheet).toHaveBeenCalledWith(
@@ -103,6 +109,8 @@ describe('CataloguePanel', () => {
       name: 'Savon',
       price: 1000,
       qty: 2,
+      atomicUnit: 'pièce',
+      packagingLevels: [],
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -127,10 +135,54 @@ describe('CataloguePanel', () => {
       name: 'Savon',
       price: 1000,
       qty: 2,
+      atomicUnit: 'pièce',
+      packagingLevels: [],
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(updateArticleQuantity).toHaveBeenCalledWith('a1', 38);
+  });
+
+  it("AddSheetValided avec un palier de conditionnement décrémente le stock par qty × ratio, pas qty brut", async () => {
+    const addToCart = vi.spyOn(Basket.prototype, 'addToCart');
+    CataloguePanel.init();
+    EventBus.getInstance().emit(AppEvent.Connected, undefined);
+
+    EventBus.getInstance().emit(AppEvent.AddSheetValided, {
+      id: 'a1',
+      name: 'Lait en poudre',
+      price: 11000,
+      qty: 1,
+      atomicUnit: 'pièce',
+      packagingLevels: [{ label: 'Carton de 12', ratio: 12, price: 11000 }],
+      soldAsLabel: 'Carton de 12',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // 1 carton × ratio 12 = 12 unités atomiques décrémentées, pas 1.
+    expect(articleController.adjustStockLocally).toHaveBeenCalledWith('a1', -12);
+    expect(addToCart).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'a1', quantity: 1, soldAsLabel: 'Carton de 12' })
+    );
+  });
+
+  it("RemoveCard avec un palier de conditionnement restitue qty × ratio au stock", async () => {
+    articleController.getLocalById.mockResolvedValue({
+      id: 'a1',
+      packagingLevels: [{ label: 'Carton de 12', ratio: 12, price: 11000 }],
+    });
+    const renderBasket = vi.spyOn(Basket.prototype, 'render');
+    CataloguePanel.init();
+    EventBus.getInstance().emit(AppEvent.Connected, undefined);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const renderCall = renderBasket.mock.calls.at(-1)?.[0] as unknown as {
+      onClickRemoveCard: (item: unknown) => Promise<void>;
+    };
+    await renderCall.onClickRemoveCard({ id: 'a1', quantity: 2, soldAsLabel: 'Carton de 12' });
+
+    // 2 cartons retirés × ratio 12 = 24 unités atomiques restituées.
+    expect(articleController.adjustStockLocally).toHaveBeenCalledWith('a1', 24);
   });
 
   it("RemoveCard met à jour le catalogue avec le vrai stock restant, pas le delta", async () => {
@@ -155,7 +207,7 @@ describe('CataloguePanel', () => {
 
   it('SellingStarted avec resetClient=true vide le panier, le compteur et la sélection client', () => {
     const resetItems = vi.spyOn(Basket.prototype, 'resetItems');
-    const clearSelection = vi.spyOn(ClientBar.prototype, 'clearSelection');
+    const clearSelection = vi.spyOn(ClientProfilePanel.prototype, 'clearSelection');
     CataloguePanel.init();
     EventBus.getInstance().emit(AppEvent.Connected, undefined);
 
@@ -167,7 +219,7 @@ describe('CataloguePanel', () => {
 
   it("SellingStarted avec resetClient=false ne vide PAS le panier ni la sélection client (annulation du récap)", () => {
     const resetItems = vi.spyOn(Basket.prototype, 'resetItems');
-    const clearSelection = vi.spyOn(ClientBar.prototype, 'clearSelection');
+    const clearSelection = vi.spyOn(ClientProfilePanel.prototype, 'clearSelection');
     CataloguePanel.init();
     EventBus.getInstance().emit(AppEvent.Connected, undefined);
 
@@ -183,9 +235,9 @@ describe('CataloguePanel', () => {
     CataloguePanel.init();
     EventBus.getInstance().emit(AppEvent.Connected, undefined);
 
-    EventBus.getInstance().emit(AppEvent.AddSheetValided, { id: 'a1', name: 'Savon', price: 1000, qty: 1 });
+    EventBus.getInstance().emit(AppEvent.AddSheetValided, { id: 'a1', name: 'Savon', price: 1000, qty: 1, atomicUnit: 'pièce', packagingLevels: [] });
     await new Promise((resolve) => setTimeout(resolve, 0));
-    EventBus.getInstance().emit(AppEvent.AddSheetValided, { id: 'a2', name: 'Riz', price: 5000, qty: 1 });
+    EventBus.getInstance().emit(AppEvent.AddSheetValided, { id: 'a2', name: 'Riz', price: 5000, qty: 1, atomicUnit: 'pièce', packagingLevels: [] });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Dans le récap, l'article a2 a été retiré — onCancel ne renvoie plus que a1.
