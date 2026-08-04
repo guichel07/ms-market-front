@@ -1,7 +1,7 @@
 {
   "name": "ms-market-front",
   "private": false,
-  "version": "v1.0.14",
+  "version": "v1.0.15",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -30,11 +30,11 @@
   "dependencies": {
     "ms-login": "^1.0.9",
     "ms-rq": "^1.0.3",
-    "tek-ms-addsheet": "^1.0.6",
+    "tek-ms-addsheet": "^1.0.7",
     "tek-ms-barket": "^1.0.15",
     "tek-ms-catalog": "^1.0.10",
     "tek-ms-confirm": "^1.0.7",
-    "tek-ms-ds": "^1.0.25",
+    "tek-ms-ds": "^1.0.26",
     "tek-ms-footer": "^1.0.2",
     "tek-ms-header": "^1.0.16",
     "tek-ms-menu": "^1.0.7",
