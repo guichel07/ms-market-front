@@ -2,13 +2,19 @@ import { RecapSheet, type Customer, type RecapItem } from 'tek-ms-recap';
 import { EventBus } from '../../../EventBus';
 import { AppEvent } from '../../../constants';
 import { ClientController } from '../../../Domain/Client/Controller';
-import type { ClientDTO } from '../../../Domain/Client/Model';
+import { ANONYMOUS_PROFILES, type ClientDTO } from '../../../Domain/Client/Model';
 import { OrderState, type OrderSnapshot } from '../../../Domain/Order/State';
 
 // tek-ms-recap ne connaît que {id, label} (anonymat total) — un client nommé
-// n'existe plus, cf. ClientProfilePanel. On adapte depuis/vers ClientDTO ici.
+// n'existe plus, cf. ClientProfilePanel. Le `firstname` renvoyé par le back
+// pour une fiche anonyme est un libellé générique ("Client anonyme"), pas le
+// nom du profil : comme ClientProfilePanel, on retrouve le vrai libellé
+// ("Garçon", "Femme"...) via ANONYMOUS_PROFILES, à partir d'ageCategory/gender.
 function toRecapCustomer(client: ClientDTO): Customer {
-  return { id: client.id ?? '', label: client.firstname };
+  const profile = ANONYMOUS_PROFILES.find(
+    (p) => p.ageCategory === client.ageCategory && p.gender === client.gender
+  );
+  return { id: client.id ?? '', label: profile?.label ?? client.firstname };
 }
 
 export class RecapViewManager extends RecapSheet {
